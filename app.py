@@ -2,6 +2,16 @@ import streamlit as st
 import pandas as pd
 from textblob import TextBlob
 import re
+import nltk
+
+# --- BULLETPROOF FIX: FORCE DOWNLOAD DICTIONARIES ON WAKEUP ---
+@st.cache_resource
+def download_nltk_data():
+    nltk.download('punkt')
+    nltk.download('punkt_tab')
+
+download_nltk_data()
+# --------------------------------------------------------------
 
 st.set_page_config(page_title="Sales Intelligence Engine", layout="wide")
 
@@ -29,7 +39,7 @@ transcript = st.text_area("Paste the transcript here:", value=sample_transcript,
 if st.button("Analyze Call"):
     st.markdown("---")
     
-    # --- NEW FEATURE: THE ENTITY EXTRACTOR (REGEX) ---
+    # --- THE ENTITY EXTRACTOR (REGEX) ---
     st.subheader("2. 🕵️‍♂️ Competitive Intelligence & Budget Extraction")
     
     # Extract Dollar Amounts using Regex
