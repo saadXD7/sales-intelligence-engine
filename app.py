@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from textblob import TextBlob
+import re
 
 st.set_page_config(page_title="Sales Intelligence Engine", layout="wide")
 
@@ -8,27 +9,59 @@ st.title("🎙️ AI Sales Intelligence Engine")
 st.markdown("Analyze sales call transcripts to extract customer sentiment, objections, and buying signals.")
 st.markdown("---")
 
+# --- SIDEBAR: ENTERPRISE SETTINGS ---
+st.sidebar.header("⚙️ Intelligence Settings")
+competitor_input = st.sidebar.text_input("Track Competitor Mentions (comma-separated):", "AcmeCorp, TechSolutions, GlobalSystems")
+competitors_to_track = [c.strip().lower() for c in competitor_input.split(",")]
+
 # The Input Area
 st.subheader("1. Input Call Transcript")
 sample_transcript = """
 Sales Rep: Hi, thanks for taking the time to look at our software.
 Customer: No problem. I like the interface, it looks really clean and easy to use.
 Sales Rep: Glad to hear that! It integrates directly with your current stack.
-Customer: That's great, but honestly, the price is way too high for our current budget. I'm worried about the ROI.
-Sales Rep: I understand. What if we offered a phased rollout?
-Customer: That might actually work. Send me the revised contract and I'll show it to my manager.
+Customer: That's great, but honestly, the price is way too high. We were looking at a $15,000 budget, and AcmeCorp quoted us much lower.
+Sales Rep: I understand. What if we offered a phased rollout to keep it under budget?
+Customer: That might actually work. Send me the revised contract for $14,500 and I'll show it to my manager.
 """
 transcript = st.text_area("Paste the transcript here:", value=sample_transcript, height=200)
 
 if st.button("Analyze Call"):
     st.markdown("---")
-    st.subheader("2. AI Analysis Results")
     
-    # NLP Processing
+    # --- NEW FEATURE: THE ENTITY EXTRACTOR (REGEX) ---
+    st.subheader("2. 🕵️‍♂️ Competitive Intelligence & Budget Extraction")
+    
+    # Extract Dollar Amounts using Regex
+    money_pattern = r'\$\d+(?:,\d+)?(?:\.\d+)?|\b\d+\s*(?:dollars|bucks)\b'
+    budget_mentions = re.findall(money_pattern, transcript)
+    
+    # Extract Competitor Mentions
+    found_competitors = [comp for comp in competitors_to_track if comp in transcript.lower()]
+    
+    colA, colB = st.columns(2)
+    with colA:
+        st.write("**💰 Budget/Pricing Mentions Detected:**")
+        if budget_mentions:
+            for amount in budget_mentions:
+                st.warning(f"Detected Value: {amount}")
+        else:
+            st.write("No pricing mentioned.")
+            
+    with colB:
+        st.write("**🚨 Competitor Mentions Detected:**")
+        if found_competitors:
+            for comp in found_competitors:
+                st.error(f"Competitor Flagged: {comp.title()}")
+        else:
+            st.write("No competitors mentioned.")
+
+    st.markdown("---")
+    st.subheader("3. AI Sentiment Analysis")
+    
     blob = TextBlob(transcript)
     sentiment_score = blob.sentiment.polarity
     
-    # Metric Cards
     col1, col2, col3 = st.columns(3)
     
     with col1:
@@ -47,13 +80,11 @@ if st.button("Analyze Call"):
 
     st.markdown("### Sentence-by-Sentence Breakdown")
     
-    # Analyze individual sentences for business signals
     results = []
     for sentence in blob.sentences:
         text = str(sentence)
         polarity = sentence.sentiment.polarity
         
-        # Simple Keyword Extraction for Sales Context
         category = "Neutral"
         if any(word in text.lower() for word in ['price', 'budget', 'expensive', 'cost', 'worried']):
             category = "🚨 Pricing Objection"
